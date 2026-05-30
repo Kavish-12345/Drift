@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.29;
 
 import {AbstractCallback} from "reactive-lib/base/AbstractCallback.sol";
 import {IPayable} from "reactive-lib/interfaces/IPayable.sol";
