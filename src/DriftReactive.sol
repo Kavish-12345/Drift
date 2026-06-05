@@ -20,16 +20,19 @@ contract DriftReactive is AbstractReactive {
     address public immutable driftHook; // DriftHook on Sepolia
     address public immutable driftRegistry; // DriftRegistry on Sepolia
 
-    constructor(
-        uint256 originChainId_,
-        address driftHook_,
-        address driftRegistry_
-    ) {
-        originChainId = originChainId_;
-        driftHook     = driftHook_;
-        driftRegistry = driftRegistry_;
+constructor(
+    address payable systemContract_,
+    uint256 originChainId_,
+    address driftHook_,
+    address driftRegistry_
+) payable {
+    originChainId = originChainId_;
+    driftHook     = driftHook_;
+    driftRegistry = driftRegistry_;
 
-        SYSTEM.subscribe(
+    // Only subscribe if system contract has code (i.e., we're on RNK, not ReactVM)
+    if (systemContract_.code.length > 0) {
+        ISystemContract(systemContract_).subscribe(
             originChainId_,
             driftHook_,
             SWAP_OBSERVED_TOPIC0,
@@ -38,6 +41,7 @@ contract DriftReactive is AbstractReactive {
             REACTIVE_IGNORE
         );
     }
+}
 
     function react (IReactive.LogRecord calldata log_) external onlySystem {
         (

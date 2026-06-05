@@ -7,36 +7,44 @@ import {IPayable} from "reactive-lib/interfaces/IPayable.sol";
 contract DriftRegistry is AbstractCallback {
 
     struct ILRecord {
-         int16  ilBps;
-         uint64 lastUpdated;
+        int16  ilBps;
+        uint64 lastUpdated;
     }
 
     uint64 public constant STALE_AFTER = 5 minutes;
-    
+
+    address public callbackSender;
+    bool    public initialized;
+
     mapping(uint256 => ILRecord) private _records;
 
-    event ILUpdated(
-        uint256 indexed tokenId,
-        int16 ilBps,
-        uint64 timestamp
-    );
+    event ILUpdated(uint256 indexed tokenId, int16 ilBps, uint64 timestamp);
+    event Initialized(address callbackSender);
 
-     error TokenNotRegistered();
+    error TokenNotRegistered();
+    error AlreadyInitialized();
+    error NotInitialized();
+    error Unauthorized();
 
-    // callbackProxy_ = Reactive's callback proxy address
-    // callbackSender_ = DriftReactive contract address
-     constructor (
-        address payable callbackProxy_,
-        address callbackSender_
-     ) AbstractCallback(IPayable(callbackProxy_), callbackSender_) {}
+    constructor(address payable callbackProxy_)
+        AbstractCallback(IPayable(callbackProxy_), address(0))
+    {}
 
-    // Called by DriftReactive via Reactive Network callback
-    // First arg is always the ReactVM address injected by Reactive — must be address
+    function initialize(address callbackSender_) external {
+        if (initialized) revert AlreadyInitialized();
+        callbackSender = callbackSender_;
+        initialized = true;
+        emit Initialized(callbackSender_);
+    }
+
     function updateIL(
         address callbackSender_,
         uint256 tokenId,
         int16 ilBps
-    ) external onlyCallbackSender(callbackSender_) {
+    ) external {
+        if (!initialized) revert NotInitialized();
+        if (callbackSender_ != callbackSender) revert Unauthorized();
+
         _records[tokenId] = ILRecord({
             ilBps:       ilBps,
             lastUpdated: uint64(block.timestamp)
